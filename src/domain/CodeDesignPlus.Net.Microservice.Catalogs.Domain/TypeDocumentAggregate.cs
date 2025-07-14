@@ -43,8 +43,9 @@ public class TypeDocumentAggregate(Guid id) : AggregateRootBase(id)
 
     public void Delete()
     {
-        IsActive = false;
-        UpdatedAt = SystemClock.Instance.GetCurrentInstant();
+        this.IsDeleted = true;
+        this.IsActive = false;
+        this.DeletedAt = SystemClock.Instance.GetCurrentInstant();
         
         AddEvent(TypeDocumentDeletedDomainEvent.Create(Id, Name, Description, Code, IsActive));
     }

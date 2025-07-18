@@ -110,6 +110,6 @@ ms-base:
         uri: /
       route:
       - destination:
-          host: ms-catalogs-rest.urbancore.svc.cluster.local
+          host: ms-catalogs-rest.codedesignplus.svc.cluster.local
           port:
             number: 5000

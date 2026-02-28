@@ -1,6 +1,6 @@
 namespace CodeDesignPlus.Net.Microservice.Catalogs.Domain.DomainEvents;
 
-[EventKey<TypeDocumentAggregate>(1, "TypeDocumentDeletedDomainEvent", autoCreate: false)]
+[EventKey<TypeDocumentAggregate>(1, "TypeDocumentDeletedDomainEvent")]
 public class TypeDocumentDeletedDomainEvent(
     Guid aggregateId,
     string name,

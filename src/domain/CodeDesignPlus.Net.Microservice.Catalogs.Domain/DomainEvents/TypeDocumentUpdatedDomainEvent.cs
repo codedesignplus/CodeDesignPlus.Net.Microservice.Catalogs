@@ -1,6 +1,6 @@
 namespace CodeDesignPlus.Net.Microservice.Catalogs.Domain.DomainEvents;
 
-[EventKey<TypeDocumentAggregate>(1, "TypeDocumentUpdatedDomainEvent", autoCreate: false)]
+[EventKey<TypeDocumentAggregate>(1, "TypeDocumentUpdatedDomainEvent")]
 public class TypeDocumentUpdatedDomainEvent(
     Guid aggregateId,
     string name,

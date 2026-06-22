@@ -1,0 +1,44 @@
+[
+  {
+    "id": "8f230e8c-5c22-4479-b50e-9330795aa9b7",
+    "name": "Cédula de Ciudadanía",
+    "description": "Documento de identidad colombiano para mayores de 18 años.",
+    "code": "CC"
+  },
+  {
+    "id": "c997ed17-0c61-491a-98f7-b639a3ab444f",
+    "name": "Cédula de Extranjería",
+    "description": "Documento de identidad para ciudadanos extranjeros residentes en Colombia.",
+    "code": "CE"
+  },
+  {
+    "id": "9b538003-6faa-41f3-935e-2c8c1efed58e",
+    "name": "Número de Identificación Tributaria",
+    "description": "Número de identificación tributaria asignado por la DIAN.",
+    "code": "NIT"
+  },
+  {
+    "id": "dd036e4f-73eb-4110-9a34-af611edeb29d",
+    "name": "Pasaporte",
+    "description": "Documento de viaje internacional.",
+    "code": "PP"
+  },
+  {
+    "id": "90ca2025-0ce3-4d98-abe0-3870a8f5f9c2",
+    "name": "Tarjeta de Identidad",
+    "description": "Documento de identidad colombiano para menores entre 7 y 17 años.",
+    "code": "TI"
+  },
+  {
+    "id": "99dc23a9-5017-49dc-ab7c-3f4318e9c534",
+    "name": "Registro Civil",
+    "description": "Certificado de nacimiento expedido por la Registraduría Nacional.",
+    "code": "RC"
+  },
+  {
+    "id": "3a704a37-04dd-4ff4-bddd-84c20250c095",
+    "name": "Celular",
+    "description": "Identificación por número de línea móvil.",
+    "code": "CEL"
+  }
+]

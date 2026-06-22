@@ -10,4 +10,7 @@
   <ItemGroup>
     <ProjectReference Include="..\CodeDesignPlus.Net.Microservice.Catalogs.Application\CodeDesignPlus.Net.Microservice.Catalogs.Application.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Seeds\**\*.json" />
+  </ItemGroup>
 </Project>

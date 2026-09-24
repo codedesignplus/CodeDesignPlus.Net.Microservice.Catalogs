@@ -1,0 +1,8 @@
+{
+  "language": "en",
+  "errors": {
+    "100": "UnknownError",
+    "101": "Name is required.",
+    "102": "Code is required."
+  }
+}

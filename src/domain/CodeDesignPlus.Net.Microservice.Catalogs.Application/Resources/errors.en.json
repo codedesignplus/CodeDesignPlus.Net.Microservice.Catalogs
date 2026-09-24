@@ -1,0 +1,9 @@
+{
+  "language": "en",
+  "errors": {
+    "200": "UnknownError",
+    "201": "Invalid Request",
+    "202": "TypeDocument Already Exists",
+    "203": "TypeDocument Not Found"
+  }
+}

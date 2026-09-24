@@ -1,0 +1,9 @@
+{
+  "language": "pt",
+  "errors": {
+    "200": "Erro desconhecido.",
+    "201": "A requisição não é válida.",
+    "202": "Esse tipo de documento já existe.",
+    "203": "Não encontramos esse tipo de documento."
+  }
+}

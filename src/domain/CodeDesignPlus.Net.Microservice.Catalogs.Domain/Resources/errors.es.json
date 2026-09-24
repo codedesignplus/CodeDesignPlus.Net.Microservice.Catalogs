@@ -1,8 +1,8 @@
 {
   "language": "es",
   "errors": {
-    "100": "",
-    "101": "",
-    "102": ""
+    "100": "Error desconocido.",
+    "101": "El nombre es obligatorio.",
+    "102": "El código es obligatorio."
   }
 }

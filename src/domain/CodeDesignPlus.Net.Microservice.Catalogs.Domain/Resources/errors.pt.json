@@ -1,0 +1,8 @@
+{
+  "language": "pt",
+  "errors": {
+    "100": "Erro desconhecido.",
+    "101": "O nome é obrigatório.",
+    "102": "O código é obrigatório."
+  }
+}

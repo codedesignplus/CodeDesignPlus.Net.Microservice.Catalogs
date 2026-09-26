@@ -151,17 +151,22 @@ public class ListadoYCacheTest
 
     // ---------------------------------------------------------------- 050
 
+    /// <summary>
+    /// El SDK traduce un fallo de validacion por su ErrorCode, no por su mensaje: ExceptionMiddlware.Translate
+    /// descarta el ErrorMessage y, si el codigo es numerico y esta en el catalogo, usa ese error en el idioma de la
+    /// peticion. Con WithMessage caia a la plantilla generica «Name es obligatorio.» (visto en produccion el
+    /// 2026-09-26). Por eso se comprueba el codigo, no el texto.
+    /// </summary>
     [Fact]
-    public void Validador_NombraLosCamposEnEspanol_NoConElNombreDeLaPropiedad()
+    public void Validador_UsaLosCodigosPropios_QueElSdkTraduce()
     {
         var resultado = new CodeDesignPlus.Net.Microservice.Catalogs.Application.TypeDocument.Commands.CreateTypeDocument.Validator()
             .Validate(new CreateTypeDocumentCommand(Guid.NewGuid(), "", new string('d', 600), "ABCDEFG", true));
 
-        var mensajes = resultado.Errors.Select(e => e.ErrorMessage).ToList();
+        var codigos = resultado.Errors.Select(e => e.ErrorCode).ToList();
 
-        Assert.Contains(AppErrors.NameIsRequired.GetMessage(), mensajes);
-        Assert.Contains(AppErrors.CodeMaxLengthExceeded.GetMessage(), mensajes);
-        Assert.Contains(AppErrors.DescriptionMaxLengthExceeded.GetMessage(), mensajes);
-        Assert.DoesNotContain(mensajes, m => m.StartsWith("Name ") || m.StartsWith("Code ") || m.StartsWith("Description "));
+        Assert.Equal(
+            new[] { AppErrors.NameIsRequired.GetCode(), AppErrors.DescriptionMaxLengthExceeded.GetCode(), AppErrors.CodeMaxLengthExceeded.GetCode() },
+            codigos);
     }
 }

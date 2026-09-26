@@ -5,11 +5,13 @@ public class TypeDocumentRepository(IServiceProvider serviceProvider, IOptions<M
 
     : RepositoryBase(serviceProvider, mongoOptions, logger), ITypeDocumentRepository
 {
-    public Task<List<TypeDocumentAggregate>> GetAllAsync(CancellationToken cancellationToken)
+    public Task<bool> ExistsCodeAsync(string code, Guid exceptId, CancellationToken cancellationToken)
     {
-        var collection = GetCollection<TypeDocumentAggregate>();
-        var filter = Builders<TypeDocumentAggregate>.Filter.Empty;
-        return collection.Find(filter).ToListAsync(cancellationToken);
-    }
+        var normalized = TypeDocumentAggregate.NormalizeCode(code);
+        var filter = Builders<TypeDocumentAggregate>.Filter.And(
+            Builders<TypeDocumentAggregate>.Filter.Eq(x => x.Code, normalized),
+            Builders<TypeDocumentAggregate>.Filter.Ne(x => x.Id, exceptId));
 
+        return GetCollection<TypeDocumentAggregate>().Find(filter).AnyAsync(cancellationToken);
+    }
 }

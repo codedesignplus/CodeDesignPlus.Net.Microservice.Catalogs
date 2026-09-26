@@ -14,13 +14,14 @@ public class TypeDocumentController(IMediator mediator, IMapper mapper) : Contro
     /// <summary>
     /// Get all TypeDocuments.
     /// </summary>
+    /// <param name="criteria">Filters, order and paging.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    /// <returns>Collection of TypeDocuments.</returns>
+    /// <returns>A page of TypeDocuments.</returns>
     [HttpGet]
     [AllowAnonymous]
-    public async Task<IActionResult> GetTypeDocuments(CancellationToken cancellationToken)
+    public async Task<IActionResult> GetTypeDocuments([FromQuery] C.Criteria criteria, CancellationToken cancellationToken)
     {
-        var result = await mediator.Send(new GetAllTypeDocumentQuery(), cancellationToken);
+        var result = await mediator.Send(new GetAllTypeDocumentQuery(criteria), cancellationToken);
 
         return Ok(result);
     }

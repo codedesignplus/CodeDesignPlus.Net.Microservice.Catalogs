@@ -34,11 +34,5 @@
     "name": "Registro Civil",
     "description": "Certificado de nacimiento expedido por la Registraduría Nacional.",
     "code": "RC"
-  },
-  {
-    "id": "3a704a37-04dd-4ff4-bddd-84c20250c095",
-    "name": "Celular",
-    "description": "Identificación por número de línea móvil.",
-    "code": "CEL"
   }
 ]

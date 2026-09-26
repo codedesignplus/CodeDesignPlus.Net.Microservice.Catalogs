@@ -2,8 +2,15 @@
   "language": "fr",
   "errors": {
     "200": "Erreur inconnue.",
-    "201": "La requête n'est pas valide.",
+    "201": "La requête n’est pas valide.",
     "202": "Ce type de document existe déjà.",
-    "203": "Type de document introuvable."
+    "203": "Type de document introuvable.",
+    "204": "Un type de document avec ce code existe déjà.",
+    "205": "L’identifiant est obligatoire.",
+    "206": "Le nom est obligatoire.",
+    "207": "Le nom ne peut pas dépasser 64 caractères.",
+    "208": "Le code est obligatoire.",
+    "209": "Le code ne peut pas dépasser 4 caractères.",
+    "210": "La description ne peut pas dépasser 512 caractères."
   }
 }

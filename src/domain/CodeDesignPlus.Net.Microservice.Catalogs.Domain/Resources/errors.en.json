@@ -1,8 +1,9 @@
 {
   "language": "en",
   "errors": {
-    "100": "UnknownError",
-    "101": "Name is required.",
-    "102": "Code is required."
+    "100": "Unknown error.",
+    "101": "The name is required.",
+    "102": "The code is required.",
+    "103": "The user making the change is missing."
   }
 }

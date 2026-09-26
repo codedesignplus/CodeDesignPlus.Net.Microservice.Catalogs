@@ -3,6 +3,7 @@
   "errors": {
     "100": "Erreur inconnue.",
     "101": "Le nom est obligatoire.",
-    "102": "Le code est obligatoire."
+    "102": "Le code est obligatoire.",
+    "103": "L’utilisateur qui effectue la modification est manquant."
   }
 }

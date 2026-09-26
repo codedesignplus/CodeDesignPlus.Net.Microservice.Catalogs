@@ -7,9 +7,17 @@ public class Validator : AbstractValidator<UpdateTypeDocumentCommand>
 {
     public Validator()
     {
-        RuleFor(x => x.Id).NotEmpty().NotNull();
-        RuleFor(x => x.Name).NotEmpty().NotNull().MaximumLength(64);
-        RuleFor(x => x.Description).MaximumLength(512);
-        RuleFor(x => x.Code).NotEmpty().NotNull().MaximumLength(4);
+        RuleFor(x => x.Id).NotEmpty().WithMessage(_ => Errors.IdIsRequired.GetMessage());
+
+        RuleFor(x => x.Name)
+            .NotEmpty().WithMessage(_ => Errors.NameIsRequired.GetMessage())
+            .MaximumLength(64).WithMessage(_ => Errors.NameMaxLengthExceeded.GetMessage());
+
+        RuleFor(x => x.Description)
+            .MaximumLength(512).WithMessage(_ => Errors.DescriptionMaxLengthExceeded.GetMessage());
+
+        RuleFor(x => x.Code)
+            .NotEmpty().WithMessage(_ => Errors.CodeIsRequired.GetMessage())
+            .MaximumLength(4).WithMessage(_ => Errors.CodeMaxLengthExceeded.GetMessage());
     }
 }

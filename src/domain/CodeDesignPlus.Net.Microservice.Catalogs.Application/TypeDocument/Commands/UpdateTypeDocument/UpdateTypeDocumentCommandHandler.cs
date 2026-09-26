@@ -1,6 +1,6 @@
 namespace CodeDesignPlus.Net.Microservice.Catalogs.Application.TypeDocument.Commands.UpdateTypeDocument;
 
-public class UpdateTypeDocumentCommandHandler(ITypeDocumentRepository repository, IPubSub pubsub, ICacheManager cacheManager) : IRequestHandler<UpdateTypeDocumentCommand>
+public class UpdateTypeDocumentCommandHandler(ITypeDocumentRepository repository, IPubSub pubsub, ICacheManager cacheManager, IUserContext user) : IRequestHandler<UpdateTypeDocumentCommand>
 {
     public async Task Handle(UpdateTypeDocumentCommand request, CancellationToken cancellationToken)
     {
@@ -10,7 +10,11 @@ public class UpdateTypeDocumentCommandHandler(ITypeDocumentRepository repository
 
         ApplicationGuard.IsNull(typeDocument, Errors.TypeDocumentNotFound);
 
-        typeDocument.Update(request.Name, request.Description, request.Code, request.IsActive);
+        var codeInUse = await repository.ExistsCodeAsync(request.Code, request.Id, cancellationToken);
+
+        ApplicationGuard.IsTrue(codeInUse, Errors.TypeDocumentCodeAlreadyExists);
+
+        typeDocument.Update(request.Name, request.Description, request.Code, request.IsActive, user.IdUser);
 
         await repository.UpdateAsync(typeDocument, cancellationToken);
 

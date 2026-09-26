@@ -3,6 +3,7 @@
   "errors": {
     "100": "Error desconocido.",
     "101": "El nombre es obligatorio.",
-    "102": "El código es obligatorio."
+    "102": "El código es obligatorio.",
+    "103": "Falta el usuario que hace el cambio."
   }
 }

@@ -4,6 +4,13 @@
     "200": "Erro desconhecido.",
     "201": "A requisição não é válida.",
     "202": "Esse tipo de documento já existe.",
-    "203": "Não encontramos esse tipo de documento."
+    "203": "Não encontramos esse tipo de documento.",
+    "204": "Já existe um tipo de documento com esse código.",
+    "205": "O identificador é obrigatório.",
+    "206": "O nome é obrigatório.",
+    "207": "O nome não pode ultrapassar 64 caracteres.",
+    "208": "O código é obrigatório.",
+    "209": "O código não pode ultrapassar 4 caracteres.",
+    "210": "A descrição não pode ultrapassar 512 caracteres."
   }
 }

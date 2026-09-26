@@ -5,12 +5,6 @@
     "201": "The request is not valid.",
     "202": "That document type already exists.",
     "203": "We could not find that document type.",
-    "204": "A document type with that code already exists.",
-    "205": "The identifier is required.",
-    "206": "The name is required.",
-    "207": "The name cannot exceed 64 characters.",
-    "208": "The code is required.",
-    "209": "The code cannot exceed 4 characters.",
-    "210": "The description cannot exceed 512 characters."
+    "204": "A document type with that code already exists."
   }
 }

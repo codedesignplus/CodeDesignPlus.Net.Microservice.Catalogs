@@ -12,59 +12,63 @@ namespace CodeDesignPlus.Net.Microservice.Catalogs.Infrastructure.Test.Seeds;
 /// </summary>
 public class CatalogSeedServiceTest
 {
+    /// <summary>Colombia siembra seis tipos, sin «Celular», y sin ids repetidos.</summary>
     [Fact]
-    public void Colombia_TieneSeisTipos_SinCelular()
+    public void Colombia_HasSixTypes_WithoutCellPhone()
     {
-        var tipos = CatalogSeedService.LoadTypeDocuments("co");
+        var types = CatalogSeedService.LoadTypeDocuments("co");
 
-        Assert.Equal(["CC", "CE", "NIT", "PP", "TI", "RC"], tipos.Select(t => t.Code));
-        Assert.Equal(tipos.Count, tipos.Select(t => t.Id).Distinct().Count());
+        Assert.Equal(["CC", "CE", "NIT", "PP", "TI", "RC"], types.Select(t => t.Code));
+        Assert.Equal(types.Count, types.Select(t => t.Id).Distinct().Count());
     }
 
+    /// <summary>Sin pais, o con un pais sin fichero, el micro no arranca.</summary>
     [Theory]
     [InlineData(null)]
     [InlineData("")]
     [InlineData("xx")]
-    public void UnPaisSinFichero_NoArranca(string? pais)
+    public void CountryWithoutFile_FailsToStart(string? country)
     {
-        Assert.Throws<InvalidOperationException>(() => CatalogSeedService.LoadTypeDocuments(pais));
+        Assert.Throws<InvalidOperationException>(() => CatalogSeedService.LoadTypeDocuments(country));
     }
 
+    /// <summary>Solo se insertan los que faltan, con el usuario de sistema, y nunca se actualiza lo existente.</summary>
     [Fact]
-    public async Task InsertaSoloLosQueFaltan_YNoTocaLosQueExisten()
+    public async Task InsertsOnlyMissingTypes_AndNeverUpdatesExistingOnes()
     {
-        var tipos = CatalogSeedService.LoadTypeDocuments("co");
-        var existente = tipos[0].Id;
+        var types = CatalogSeedService.LoadTypeDocuments("co");
+        var existingId = types[0].Id;
         var repository = new Mock<ITypeDocumentRepository>();
         repository.Setup(x => x.ExistsAsync<TypeDocumentAggregate>(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync((Guid id, CancellationToken _) => id == existente);
-        var creados = new List<TypeDocumentAggregate>();
+            .ReturnsAsync((Guid id, CancellationToken _) => id == existingId);
+        var created = new List<TypeDocumentAggregate>();
         repository.Setup(x => x.CreateAsync(It.IsAny<TypeDocumentAggregate>(), It.IsAny<CancellationToken>()))
-            .Callback<TypeDocumentAggregate, CancellationToken>((t, _) => creados.Add(t));
+            .Callback<TypeDocumentAggregate, CancellationToken>((t, _) => created.Add(t));
 
-        var servicio = new CatalogSeedService(repository.Object, new ConfigurationBuilder().Build(), NullLogger<CatalogSeedService>.Instance);
-        await servicio.SeedTypeDocumentsAsync(tipos, CancellationToken.None);
+        var service = new CatalogSeedService(repository.Object, new ConfigurationBuilder().Build(), NullLogger<CatalogSeedService>.Instance);
+        await service.SeedTypeDocumentsAsync(types, CancellationToken.None);
 
-        Assert.Equal(tipos.Count - 1, creados.Count);
-        Assert.DoesNotContain(creados, t => t.Id == existente);
-        Assert.All(creados, t => Assert.Equal(CatalogSeedService.SystemUserId, t.CreatedBy));
+        Assert.Equal(types.Count - 1, created.Count);
+        Assert.DoesNotContain(created, t => t.Id == existingId);
+        Assert.All(created, t => Assert.Equal(CatalogSeedService.SystemUserId, t.CreatedBy));
         repository.Verify(x => x.UpdateAsync(It.IsAny<TypeDocumentAggregate>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
+    /// <summary>No se siembra un tipo cuyo codigo ya usa otro tipo.</summary>
     [Fact]
-    public async Task NoSiembraUnTipoCuyoCodigoYaUsaOtro()
+    public async Task SkipsATypeWhoseCodeIsAlreadyInUse()
     {
-        var tipos = CatalogSeedService.LoadTypeDocuments("co");
+        var types = CatalogSeedService.LoadTypeDocuments("co");
         var repository = new Mock<ITypeDocumentRepository>();
         repository.Setup(x => x.ExistsCodeAsync("CC", It.IsAny<Guid>(), It.IsAny<CancellationToken>())).ReturnsAsync(true);
-        var creados = new List<TypeDocumentAggregate>();
+        var created = new List<TypeDocumentAggregate>();
         repository.Setup(x => x.CreateAsync(It.IsAny<TypeDocumentAggregate>(), It.IsAny<CancellationToken>()))
-            .Callback<TypeDocumentAggregate, CancellationToken>((t, _) => creados.Add(t));
+            .Callback<TypeDocumentAggregate, CancellationToken>((t, _) => created.Add(t));
 
-        var servicio = new CatalogSeedService(repository.Object, new ConfigurationBuilder().Build(), NullLogger<CatalogSeedService>.Instance);
-        await servicio.SeedTypeDocumentsAsync(tipos, CancellationToken.None);
+        var service = new CatalogSeedService(repository.Object, new ConfigurationBuilder().Build(), NullLogger<CatalogSeedService>.Instance);
+        await service.SeedTypeDocumentsAsync(types, CancellationToken.None);
 
-        Assert.DoesNotContain(creados, t => t.Code == "CC");
-        Assert.Equal(tipos.Count - 1, creados.Count);
+        Assert.DoesNotContain(created, t => t.Code == "CC");
+        Assert.Equal(types.Count - 1, created.Count);
     }
 }

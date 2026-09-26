@@ -3,21 +3,17 @@ namespace CodeDesignPlus.Net.Microservice.Catalogs.Application.TypeDocument.Comm
 [DtoGenerator]
 public record CreateTypeDocumentCommand(Guid Id, string Name, string? Description, string Code, bool IsActive) : IRequest;
 
+/// <summary>
+/// Solo validadores corrientes y sin texto propio: el SDK los traduce a los cuatro idiomas con el nombre de la
+/// propiedad del comando (regla 35 de Microservices/rules/). Nada de WithMessage, que queda congelado en un idioma.
+/// </summary>
 public class Validator : AbstractValidator<CreateTypeDocumentCommand>
 {
     public Validator()
     {
-        RuleFor(x => x.Id).NotEmpty().WithErrorCode(Errors.IdIsRequired.GetCode());
-
-        RuleFor(x => x.Name)
-            .NotEmpty().WithErrorCode(Errors.NameIsRequired.GetCode())
-            .MaximumLength(64).WithErrorCode(Errors.NameMaxLengthExceeded.GetCode());
-
-        RuleFor(x => x.Description)
-            .MaximumLength(512).WithErrorCode(Errors.DescriptionMaxLengthExceeded.GetCode());
-
-        RuleFor(x => x.Code)
-            .NotEmpty().WithErrorCode(Errors.CodeIsRequired.GetCode())
-            .MaximumLength(4).WithErrorCode(Errors.CodeMaxLengthExceeded.GetCode());
+        RuleFor(x => x.Id).NotEmpty();
+        RuleFor(x => x.Name).NotEmpty().MaximumLength(64);
+        RuleFor(x => x.Description).MaximumLength(512);
+        RuleFor(x => x.Code).NotEmpty().MaximumLength(4);
     }
 }

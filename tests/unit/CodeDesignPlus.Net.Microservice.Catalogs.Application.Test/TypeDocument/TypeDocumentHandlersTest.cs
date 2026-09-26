@@ -8,52 +8,53 @@ using CodeDesignPlus.Net.Microservice.Catalogs.Application.TypeDocument.Commands
 using CodeDesignPlus.Net.Microservice.Catalogs.Application.TypeDocument.Queries.GetAllTypeDocument;
 using CodeDesignPlus.Net.Microservice.Catalogs.Application.TypeDocument.Queries.GetTypeDocumentById;
 using AppErrors = CodeDesignPlus.Net.Microservice.Catalogs.Application.Errors;
+using CreateValidator = CodeDesignPlus.Net.Microservice.Catalogs.Application.TypeDocument.Commands.CreateTypeDocument.Validator;
 
 namespace CodeDesignPlus.Net.Microservice.Catalogs.Application.Test.TypeDocument;
 
 /// <summary>
 /// Planes 047 (listado y cache), 049 (codigo unico), 050 (mensajes) y 051 (auditoria) de pendings.
 /// </summary>
-public class ListadoYCacheTest
+public class TypeDocumentHandlersTest
 {
     private readonly Mock<ITypeDocumentRepository> repository = new();
     private readonly Mock<IPubSub> pubsub = new();
     private readonly Mock<ICacheManager> cache = new();
     private readonly Mock<IUserContext> user = new();
-    private readonly Guid idUser = Guid.NewGuid();
+    private readonly Guid userId = Guid.NewGuid();
 
-    public ListadoYCacheTest()
+    public TypeDocumentHandlersTest()
     {
-        user.SetupGet(x => x.IdUser).Returns(idUser);
+        user.SetupGet(x => x.IdUser).Returns(userId);
     }
 
-    private static TypeDocumentAggregate Tipo(Guid id) =>
+    private static TypeDocumentAggregate NewTypeDocument(Guid id) =>
         TypeDocumentAggregate.Create(id, "Pasaporte", "Documento de viaje", "PP", true, Guid.NewGuid());
 
-    private static TypeDocumentDto Dto(Guid id) =>
+    private static TypeDocumentDto NewDto(Guid id) =>
         new() { Id = id, Name = "Pasaporte", Description = null, Code = "PP", IsActive = true };
 
-    // ---------------------------------------------------------------- 047
-
+    /// <summary>El listado pasa filtro, orden y paginacion al repositorio (plan 047).</summary>
     [Fact]
-    public async Task Listado_PasaLosCriteriosAlRepositorio()
+    public async Task GetAll_PassesTheCriteriaToTheRepository()
     {
         var criteria = new C.Criteria { Filters = "isActive=true", OrderBy = "name", Limit = 2, Skip = 0 };
-        var pagina = new Pagination<TypeDocumentAggregate>([Tipo(Guid.NewGuid())], 7, 2, 0);
-        repository.Setup(x => x.MatchingAsync<TypeDocumentAggregate>(criteria, It.IsAny<CancellationToken>())).ReturnsAsync(pagina);
+        var page = new Pagination<TypeDocumentAggregate>([NewTypeDocument(Guid.NewGuid())], 7, 2, 0);
+        repository.Setup(x => x.MatchingAsync<TypeDocumentAggregate>(criteria, It.IsAny<CancellationToken>())).ReturnsAsync(page);
         var mapper = new Mock<IMapper>();
-        var esperado = new Pagination<TypeDocumentDto>([Dto(Guid.NewGuid())], 7, 2, 0);
-        mapper.Setup(x => x.Map<Pagination<TypeDocumentDto>>(pagina)).Returns(esperado);
+        var expected = new Pagination<TypeDocumentDto>([NewDto(Guid.NewGuid())], 7, 2, 0);
+        mapper.Setup(x => x.Map<Pagination<TypeDocumentDto>>(page)).Returns(expected);
 
         var handler = new GetAllTypeDocumentQueryHandler(repository.Object, mapper.Object);
-        var resultado = await handler.Handle(new GetAllTypeDocumentQuery(criteria), CancellationToken.None);
+        var result = await handler.Handle(new GetAllTypeDocumentQuery(criteria), CancellationToken.None);
 
-        Assert.Same(esperado, resultado);
+        Assert.Same(expected, result);
         repository.Verify(x => x.MatchingAsync<TypeDocumentAggregate>(criteria, It.IsAny<CancellationToken>()), Times.Once);
     }
 
+    /// <summary>Un tipo que no existe da el error 203 y no se guarda nada en cache; antes era un 500 (plan 047).</summary>
     [Fact]
-    public async Task Detalle_DeUnTipoQueNoExiste_DaTypeDocumentNotFound_YNoCacheaNada()
+    public async Task GetById_UnknownId_ThrowsNotFound_AndCachesNothing()
     {
         var id = Guid.NewGuid();
         cache.Setup(x => x.ExistsAsync(id.ToString())).ReturnsAsync(false);
@@ -66,38 +67,39 @@ public class ListadoYCacheTest
         cache.Verify(x => x.SetAsync(It.IsAny<string>(), It.IsAny<TypeDocumentDto>(), It.IsAny<TimeSpan?>()), Times.Never);
     }
 
+    /// <summary>Editar limpia el detalle en cache y guarda quien edita (planes 047 y 051).</summary>
     [Fact]
-    public async Task Editar_LimpiaElDetalleEnCache_YGuardaQuienEdita()
+    public async Task Update_ClearsTheCachedDetail_AndRecordsWhoUpdated()
     {
         var id = Guid.NewGuid();
-        var tipo = Tipo(id);
-        repository.Setup(x => x.FindAsync<TypeDocumentAggregate>(id, It.IsAny<CancellationToken>())).ReturnsAsync(tipo);
+        var typeDocument = NewTypeDocument(id);
+        repository.Setup(x => x.FindAsync<TypeDocumentAggregate>(id, It.IsAny<CancellationToken>())).ReturnsAsync(typeDocument);
 
         var handler = new UpdateTypeDocumentCommandHandler(repository.Object, pubsub.Object, cache.Object, user.Object);
         await handler.Handle(new UpdateTypeDocumentCommand(id, "Pasaporte", null, "PP", false), CancellationToken.None);
 
         cache.Verify(x => x.RemoveAsync(id.ToString()), Times.Once);
-        Assert.Equal(idUser, tipo.UpdatedBy);
+        Assert.Equal(userId, typeDocument.UpdatedBy);
     }
 
+    /// <summary>Borrar limpia el detalle en cache y guarda quien borra; antes seguia respondiendo 200 (planes 047 y 051).</summary>
     [Fact]
-    public async Task Borrar_LimpiaElDetalleEnCache_YGuardaQuienBorra()
+    public async Task Delete_ClearsTheCachedDetail_AndRecordsWhoDeleted()
     {
         var id = Guid.NewGuid();
-        var tipo = Tipo(id);
-        repository.Setup(x => x.FindAsync<TypeDocumentAggregate>(id, It.IsAny<CancellationToken>())).ReturnsAsync(tipo);
+        var typeDocument = NewTypeDocument(id);
+        repository.Setup(x => x.FindAsync<TypeDocumentAggregate>(id, It.IsAny<CancellationToken>())).ReturnsAsync(typeDocument);
 
         var handler = new DeleteTypeDocumentCommandHandler(repository.Object, pubsub.Object, cache.Object, user.Object);
         await handler.Handle(new DeleteTypeDocumentCommand(id), CancellationToken.None);
 
         cache.Verify(x => x.RemoveAsync(id.ToString()), Times.Once);
-        Assert.Equal(idUser, tipo.DeletedBy);
+        Assert.Equal(userId, typeDocument.DeletedBy);
     }
 
-    // ---------------------------------------------------------------- 049 y 051
-
+    /// <summary>No se crea un tipo con un codigo que ya usa otro (plan 049).</summary>
     [Fact]
-    public async Task Crear_ConUnCodigoQueYaUsaOtroTipo_DaTypeDocumentCodeAlreadyExists()
+    public async Task Create_WithACodeAlreadyInUse_ThrowsCodeAlreadyExists()
     {
         var id = Guid.NewGuid();
         repository.Setup(x => x.ExistsCodeAsync("CC", id, It.IsAny<CancellationToken>())).ReturnsAsync(true);
@@ -110,11 +112,12 @@ public class ListadoYCacheTest
         repository.Verify(x => x.CreateAsync(It.IsAny<TypeDocumentAggregate>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
+    /// <summary>Tampoco se edita un tipo para darle el codigo de otro (plan 049).</summary>
     [Fact]
-    public async Task Editar_ConUnCodigoQueYaUsaOtroTipo_DaTypeDocumentCodeAlreadyExists()
+    public async Task Update_WithACodeAlreadyInUse_ThrowsCodeAlreadyExists()
     {
         var id = Guid.NewGuid();
-        repository.Setup(x => x.FindAsync<TypeDocumentAggregate>(id, It.IsAny<CancellationToken>())).ReturnsAsync(Tipo(id));
+        repository.Setup(x => x.FindAsync<TypeDocumentAggregate>(id, It.IsAny<CancellationToken>())).ReturnsAsync(NewTypeDocument(id));
         repository.Setup(x => x.ExistsCodeAsync("CC", id, It.IsAny<CancellationToken>())).ReturnsAsync(true);
 
         var handler = new UpdateTypeDocumentCommandHandler(repository.Object, pubsub.Object, cache.Object, user.Object);
@@ -124,24 +127,26 @@ public class ListadoYCacheTest
         Assert.Equal(AppErrors.TypeDocumentCodeAlreadyExists.GetCode(), error.Code);
     }
 
+    /// <summary>Crear guarda quien crea, y el codigo en mayusculas y sin espacios (planes 049 y 051).</summary>
     [Fact]
-    public async Task Crear_GuardaQuienCrea()
+    public async Task Create_RecordsWhoCreated_AndNormalizesTheCode()
     {
         var id = Guid.NewGuid();
-        TypeDocumentAggregate? creado = null;
+        TypeDocumentAggregate? created = null;
         repository.Setup(x => x.CreateAsync(It.IsAny<TypeDocumentAggregate>(), It.IsAny<CancellationToken>()))
-            .Callback<TypeDocumentAggregate, CancellationToken>((t, _) => creado = t);
+            .Callback<TypeDocumentAggregate, CancellationToken>((t, _) => created = t);
 
         var handler = new CreateTypeDocumentCommandHandler(repository.Object, pubsub.Object, user.Object);
         await handler.Handle(new CreateTypeDocumentCommand(id, "Pasaporte", null, " pp ", true), CancellationToken.None);
 
-        Assert.NotNull(creado);
-        Assert.Equal(idUser, creado!.CreatedBy);
-        Assert.Equal("PP", creado.Code);
+        Assert.NotNull(created);
+        Assert.Equal(userId, created!.CreatedBy);
+        Assert.Equal("PP", created.Code);
     }
 
+    /// <summary>El agregado no se crea sin saber quien lo crea (plan 051).</summary>
     [Fact]
-    public void Agregado_SinUsuario_NoSeCrea()
+    public void Aggregate_WithoutUser_IsRejected()
     {
         var error = Assert.Throws<CodeDesignPlusException>(() =>
             TypeDocumentAggregate.Create(Guid.NewGuid(), "Pasaporte", null, "PP", true, Guid.Empty));
@@ -149,24 +154,18 @@ public class ListadoYCacheTest
         Assert.Equal(Domain.Errors.UserRequired.GetCode(), error.Code);
     }
 
-    // ---------------------------------------------------------------- 050
-
     /// <summary>
-    /// El SDK traduce un fallo de validacion por su ErrorCode, no por su mensaje: ExceptionMiddlware.Translate
-    /// descarta el ErrorMessage y, si el codigo es numerico y esta en el catalogo, usa ese error en el idioma de la
-    /// peticion. Con WithMessage caia a la plantilla generica «Name es obligatorio.» (visto en produccion el
-    /// 2026-09-26). Por eso se comprueba el codigo, no el texto.
+    /// Los validadores corrientes van sin texto ni codigo propio, para que el SDK los traduzca por su codigo de
+    /// FluentValidation (regla 35). Un WithMessage cambiaria el codigo y el texto quedaria en un solo idioma.
     /// </summary>
     [Fact]
-    public void Validador_UsaLosCodigosPropios_QueElSdkTraduce()
+    public void Validator_UsesTheStandardCodes_ThatTheSdkTranslates()
     {
-        var resultado = new CodeDesignPlus.Net.Microservice.Catalogs.Application.TypeDocument.Commands.CreateTypeDocument.Validator()
+        var result = new CreateValidator()
             .Validate(new CreateTypeDocumentCommand(Guid.NewGuid(), "", new string('d', 600), "ABCDEFG", true));
 
-        var codigos = resultado.Errors.Select(e => e.ErrorCode).ToList();
-
         Assert.Equal(
-            new[] { AppErrors.NameIsRequired.GetCode(), AppErrors.DescriptionMaxLengthExceeded.GetCode(), AppErrors.CodeMaxLengthExceeded.GetCode() },
-            codigos);
+            ["NotEmptyValidator", "MaximumLengthValidator", "MaximumLengthValidator"],
+            result.Errors.Select(e => e.ErrorCode));
     }
 }

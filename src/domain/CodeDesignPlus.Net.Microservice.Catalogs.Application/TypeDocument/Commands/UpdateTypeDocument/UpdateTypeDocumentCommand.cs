@@ -12,8 +12,8 @@ public class Validator : AbstractValidator<UpdateTypeDocumentCommand>
     public Validator()
     {
         RuleFor(x => x.Id).NotEmpty();
-        RuleFor(x => x.Name).NotEmpty().MaximumLength(64);
-        RuleFor(x => x.Description).MaximumLength(512);
+        RuleFor(x => x.Name).NotEmpty().MaximumLength(FieldLength.Name);
+        RuleFor(x => x.Description).MaximumLength(FieldLength.Description);
         RuleFor(x => x.Code).NotEmpty().MaximumLength(4);
     }
 }

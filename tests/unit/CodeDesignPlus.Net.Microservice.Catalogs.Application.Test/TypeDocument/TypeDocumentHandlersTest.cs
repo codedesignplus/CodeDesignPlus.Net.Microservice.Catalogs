@@ -109,7 +109,7 @@ public class TypeDocumentHandlersTest
             handler.Handle(new CreateTypeDocumentCommand(id, "Otra cédula", null, "CC", true), CancellationToken.None));
 
         Assert.Equal(AppErrors.TypeDocumentCodeAlreadyExists.GetCode(), error.Code);
-        repository.Verify(x => x.CreateAsync(It.IsAny<TypeDocumentAggregate>(), It.IsAny<CancellationToken>()), Times.Never);
+        repository.Verify(x => x.CreateIfAbsentAsync(It.IsAny<TypeDocumentAggregate>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     /// <summary>Tampoco se edita un tipo para darle el codigo de otro (plan 049).</summary>
@@ -133,8 +133,9 @@ public class TypeDocumentHandlersTest
     {
         var id = Guid.NewGuid();
         TypeDocumentAggregate? created = null;
-        repository.Setup(x => x.CreateAsync(It.IsAny<TypeDocumentAggregate>(), It.IsAny<CancellationToken>()))
-            .Callback<TypeDocumentAggregate, CancellationToken>((t, _) => created = t);
+        repository.Setup(x => x.CreateIfAbsentAsync(It.IsAny<TypeDocumentAggregate>(), It.IsAny<CancellationToken>()))
+            .Callback<TypeDocumentAggregate, CancellationToken>((t, _) => created = t)
+            .ReturnsAsync(true);
 
         var handler = new CreateTypeDocumentCommandHandler(repository.Object, pubsub.Object, user.Object);
         await handler.Handle(new CreateTypeDocumentCommand(id, "Pasaporte", null, " pp ", true), CancellationToken.None);

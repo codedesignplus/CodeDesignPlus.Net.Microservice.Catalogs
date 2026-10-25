@@ -14,4 +14,19 @@ public class TypeDocumentRepository(IServiceProvider serviceProvider, IOptions<M
 
         return GetCollection<TypeDocumentAggregate>().Find(filter).AnyAsync(cancellationToken);
     }
+
+    /// <inheritdoc />
+    public async Task<bool> CreateIfAbsentAsync(TypeDocumentAggregate typeDocument, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await CreateAsync(typeDocument, cancellationToken);
+
+            return true;
+        }
+        catch (MongoWriteException exception) when (exception.WriteError?.Category == ServerErrorCategory.DuplicateKey)
+        {
+            return false;
+        }
+    }
 }

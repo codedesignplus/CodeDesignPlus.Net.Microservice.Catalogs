@@ -2,6 +2,7 @@ using System.Reflection;
 using JsonSerializer = System.Text.Json.JsonSerializer;
 using JsonSerializerOptions = System.Text.Json.JsonSerializerOptions;
 using Microsoft.Extensions.Hosting;
+using CodeDesignPlus.Net.PubSub.Abstractions;
 
 namespace CodeDesignPlus.Net.Microservice.Catalogs.Infrastructure.Seeds;
 
@@ -20,9 +21,14 @@ namespace CodeDesignPlus.Net.Microservice.Catalogs.Infrastructure.Seeds;
 /// <para>Consecuencias: corregir un tipo que ya existe no se hace cambiando el fichero, sino desde la pantalla; un tipo
 /// sembrado que se borra vuelve en el siguiente arranque (para retirarlo se desactiva, o se quita del fichero); y un
 /// tipo que se quita del fichero no se borra de las bases donde ya estaba.</para>
+///
+/// <para><b>Lo que se inserta se anuncia</b> con <see cref="Domain.DomainEvents.TypeDocumentCreatedDomainEvent"/>, igual que
+/// un alta desde la pantalla: ms-microsoftgraph guarda una copia del catalogo para resolver el codigo que elige quien se
+/// registra en Entra External ID (pendings/663). Antes la siembra descartaba el evento y esa copia nacia vacia.</para>
 /// </summary>
 public class CatalogSeedService(
     ITypeDocumentRepository typeDocumentRepository,
+    IPubSub pubSub,
     IConfiguration configuration,
     ILogger<CatalogSeedService> logger
 ) : BackgroundService
@@ -67,7 +73,7 @@ public class CatalogSeedService(
     }
 
     /// <summary>
-    /// Inserta los tipos del fichero que falten, sin tocar los que ya existen.
+    /// Inserta los tipos del fichero que falten, sin tocar los que ya existen, y anuncia cada alta.
     /// </summary>
     public async Task SeedTypeDocumentsAsync(List<TypeDocumentSeed> data, CancellationToken ct)
     {
@@ -88,6 +94,7 @@ public class CatalogSeedService(
 
                 var aggregate = TypeDocumentAggregate.Create(item.Id, item.Name, item.Description, item.Code, true, SystemUserId);
                 await typeDocumentRepository.CreateAsync(aggregate, ct);
+                await pubSub.PublishAsync(aggregate.GetAndClearEvents(), ct);
                 inserted++;
             }
             catch (Exception ex)

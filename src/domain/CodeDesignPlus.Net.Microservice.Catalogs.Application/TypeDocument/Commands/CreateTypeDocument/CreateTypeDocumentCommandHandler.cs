@@ -1,6 +1,9 @@
+using CodeDesignPlus.Net.Microservice.Catalogs.Application.Options;
+using Microsoft.Extensions.Options;
+
 namespace CodeDesignPlus.Net.Microservice.Catalogs.Application.TypeDocument.Commands.CreateTypeDocument;
 
-public class CreateTypeDocumentCommandHandler(ITypeDocumentRepository repository, IPubSub pubsub, IUserContext user) : IRequestHandler<CreateTypeDocumentCommand>
+public class CreateTypeDocumentCommandHandler(ITypeDocumentRepository repository, IPubSub pubsub, IUserContext user, IOptions<SeedOptions> seed) : IRequestHandler<CreateTypeDocumentCommand>
 {
     public async Task Handle(CreateTypeDocumentCommand request, CancellationToken cancellationToken)
     {
@@ -15,7 +18,7 @@ public class CreateTypeDocumentCommandHandler(ITypeDocumentRepository repository
 
         ApplicationGuard.IsTrue(codeInUse, Errors.TypeDocumentCodeAlreadyExists);
 
-        var typeDocument = TypeDocumentAggregate.Create(request.Id, request.Name, request.Description, request.Code, request.IsActive, user.IdUser);
+        var typeDocument = TypeDocumentAggregate.Create(request.Id, request.Name, request.Description, request.Code, seed.Value.Country, request.IsActive, user.IdUser);
 
         // Dos envíos que llegan a la vez pasan los dos la comprobación de arriba; el segundo choca contra el id y no publica.
         if (!await repository.CreateIfAbsentAsync(typeDocument, cancellationToken))

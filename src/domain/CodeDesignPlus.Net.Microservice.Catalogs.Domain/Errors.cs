@@ -9,4 +9,5 @@ public class Errors: IErrorCodes
     public static readonly Error NameRequired = new("101");
     public static readonly Error CodeRequired = new("102");
     public static readonly Error UserRequired = new("103");
+    public static readonly Error CountryRequired = new("104");
 }

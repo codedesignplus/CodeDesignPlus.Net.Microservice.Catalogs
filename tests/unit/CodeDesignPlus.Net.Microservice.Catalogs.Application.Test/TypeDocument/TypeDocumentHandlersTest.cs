@@ -7,6 +7,8 @@ using CodeDesignPlus.Net.Microservice.Catalogs.Application.TypeDocument.Commands
 using CodeDesignPlus.Net.Microservice.Catalogs.Application.TypeDocument.Commands.UpdateTypeDocument;
 using CodeDesignPlus.Net.Microservice.Catalogs.Application.TypeDocument.Queries.GetAllTypeDocument;
 using CodeDesignPlus.Net.Microservice.Catalogs.Application.TypeDocument.Queries.GetTypeDocumentById;
+using CodeDesignPlus.Net.Microservice.Catalogs.Application.Options;
+using Microsoft.Extensions.Options;
 using AppErrors = CodeDesignPlus.Net.Microservice.Catalogs.Application.Errors;
 using CreateValidator = CodeDesignPlus.Net.Microservice.Catalogs.Application.TypeDocument.Commands.CreateTypeDocument.Validator;
 
@@ -22,6 +24,7 @@ public class TypeDocumentHandlersTest
     private readonly Mock<ICacheManager> cache = new();
     private readonly Mock<IUserContext> user = new();
     private readonly Guid userId = Guid.NewGuid();
+    private readonly IOptions<SeedOptions> seed = Microsoft.Extensions.Options.Options.Create(new SeedOptions { Country = "co" });
 
     public TypeDocumentHandlersTest()
     {
@@ -29,7 +32,7 @@ public class TypeDocumentHandlersTest
     }
 
     private static TypeDocumentAggregate NewTypeDocument(Guid id) =>
-        TypeDocumentAggregate.Create(id, "Pasaporte", "Documento de viaje", "PP", true, Guid.NewGuid());
+        TypeDocumentAggregate.Create(id, "Pasaporte", "Documento de viaje", "PP", "CO", true, Guid.NewGuid());
 
     private static TypeDocumentDto NewDto(Guid id) =>
         new() { Id = id, Name = "Pasaporte", Description = null, Code = "PP", IsActive = true };
@@ -104,7 +107,7 @@ public class TypeDocumentHandlersTest
         var id = Guid.NewGuid();
         repository.Setup(x => x.ExistsCodeAsync("CC", id, It.IsAny<CancellationToken>())).ReturnsAsync(true);
 
-        var handler = new CreateTypeDocumentCommandHandler(repository.Object, pubsub.Object, user.Object);
+        var handler = new CreateTypeDocumentCommandHandler(repository.Object, pubsub.Object, user.Object, seed);
         var error = await Assert.ThrowsAsync<CodeDesignPlusException>(() =>
             handler.Handle(new CreateTypeDocumentCommand(id, "Otra cédula", null, "CC", true), CancellationToken.None));
 
@@ -137,7 +140,7 @@ public class TypeDocumentHandlersTest
             .Callback<TypeDocumentAggregate, CancellationToken>((t, _) => created = t)
             .ReturnsAsync(true);
 
-        var handler = new CreateTypeDocumentCommandHandler(repository.Object, pubsub.Object, user.Object);
+        var handler = new CreateTypeDocumentCommandHandler(repository.Object, pubsub.Object, user.Object, seed);
         await handler.Handle(new CreateTypeDocumentCommand(id, "Pasaporte", null, " pp ", true), CancellationToken.None);
 
         Assert.NotNull(created);
@@ -145,12 +148,47 @@ public class TypeDocumentHandlersTest
         Assert.Equal("PP", created.Code);
     }
 
+    /// <summary>
+    /// Un tipo creado desde la pantalla es del pais del despliegue, en ISO alfa-2 y mayusculas (pendings/663).
+    /// </summary>
+    [Fact]
+    public async Task Create_FromTheScreen_TakesTheCountryOfTheDeployment()
+    {
+        // Arrange
+        TypeDocumentAggregate? created = null;
+        repository.Setup(x => x.CreateIfAbsentAsync(It.IsAny<TypeDocumentAggregate>(), It.IsAny<CancellationToken>()))
+            .Callback<TypeDocumentAggregate, CancellationToken>((t, _) => created = t)
+            .ReturnsAsync(true);
+        var handler = new CreateTypeDocumentCommandHandler(repository.Object, pubsub.Object, user.Object, seed);
+
+        // Act
+        await handler.Handle(new CreateTypeDocumentCommand(Guid.NewGuid(), "Carné diplomático", null, "CD", true), CancellationToken.None);
+
+        // Assert
+        Assert.Equal("CO", created!.Country);
+    }
+
+    /// <summary>
+    /// El agregado no se crea sin pais: los tipos de documento son un catalogo del pais (pendings/663).
+    /// </summary>
+    [Theory]
+    [InlineData("")]
+    [InlineData("  ")]
+    public void Aggregate_WithoutCountry_IsRejected(string country)
+    {
+        // Act
+        var error = Assert.Throws<CodeDesignPlusException>(() => TypeDocumentAggregate.Create(Guid.NewGuid(), "Pasaporte", null, "41", country, true, Guid.NewGuid()));
+
+        // Assert
+        Assert.Equal(Domain.Errors.CountryRequired.GetCode(), error.Code);
+    }
+
     /// <summary>El agregado no se crea sin saber quien lo crea (plan 051).</summary>
     [Fact]
     public void Aggregate_WithoutUser_IsRejected()
     {
         var error = Assert.Throws<CodeDesignPlusException>(() =>
-            TypeDocumentAggregate.Create(Guid.NewGuid(), "Pasaporte", null, "PP", true, Guid.Empty));
+            TypeDocumentAggregate.Create(Guid.NewGuid(), "Pasaporte", null, "PP", "CO", true, Guid.Empty));
 
         Assert.Equal(Domain.Errors.UserRequired.GetCode(), error.Code);
     }

@@ -4,6 +4,7 @@
     "100": "Erro desconhecido.",
     "101": "O nome é obrigatório.",
     "102": "O código é obrigatório.",
-    "103": "Falta o usuário que faz a alteração."
+    "103": "Falta o usuário que faz a alteração.",
+    "104": "O país é obrigatório."
   }
 }

@@ -68,7 +68,12 @@ public class CatalogSeedService(
             ?? throw new InvalidOperationException($"No existe {fileName}: el pais '{country}' no tiene tipos de documento para sembrar.");
 
         using var stream = assembly.GetManifestResourceStream(resourceName)!;
-        return JsonSerializer.Deserialize<List<TypeDocumentSeed>>(stream, new JsonSerializerOptions { PropertyNameCaseInsensitive = true })!;
+        var types = JsonSerializer.Deserialize<List<TypeDocumentSeed>>(stream, new JsonSerializerOptions { PropertyNameCaseInsensitive = true })!;
+
+        // El fichero es el de un pais: cada tipo es de ese pais (pendings/663).
+        var countryCode = TypeDocumentAggregate.NormalizeCountry(country);
+
+        return [.. types.Select(t => t with { Country = countryCode })];
     }
 
     /// <summary>
@@ -91,7 +96,7 @@ public class CatalogSeedService(
                     continue;
                 }
 
-                var aggregate = TypeDocumentAggregate.Create(item.Id, item.Name, item.Description, item.Code, true, SystemUserId);
+                var aggregate = TypeDocumentAggregate.Create(item.Id, item.Name, item.Description, item.Code, item.Country!, true, SystemUserId);
                 await typeDocumentRepository.CreateAsync(aggregate, ct);
                 inserted++;
             }
@@ -105,4 +110,4 @@ public class CatalogSeedService(
     }
 }
 
-public record TypeDocumentSeed(Guid Id, string Name, string? Description, string Code);
+public record TypeDocumentSeed(Guid Id, string Name, string? Description, string Code, string? Country = null);

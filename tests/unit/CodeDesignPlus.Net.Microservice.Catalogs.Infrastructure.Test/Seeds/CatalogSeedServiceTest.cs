@@ -38,6 +38,28 @@ public class CatalogSeedServiceTest
         Assert.All(types, t => Assert.Equal(Guid.Parse($"c0d0c000-0000-0000-0000-0000000000{t.Code}"), t.Id));
     }
 
+    /// <summary>
+    /// Cada tipo del fichero de un pais es de ese pais, y se guarda con el (pendings/663).
+    /// </summary>
+    [Fact]
+    public async Task SeedTypeDocumentsAsync_Colombia_StoresTheCountry()
+    {
+        // Arrange
+        var types = CatalogSeedService.LoadTypeDocuments("co");
+        var repository = new Mock<ITypeDocumentRepository>();
+        var created = new List<TypeDocumentAggregate>();
+        repository.Setup(x => x.CreateAsync(It.IsAny<TypeDocumentAggregate>(), It.IsAny<CancellationToken>()))
+            .Callback<TypeDocumentAggregate, CancellationToken>((t, _) => created.Add(t));
+        var service = new CatalogSeedService(repository.Object, new ConfigurationBuilder().Build(), NullLogger<CatalogSeedService>.Instance);
+
+        // Act
+        await service.SeedTypeDocumentsAsync(types, CancellationToken.None);
+
+        // Assert
+        Assert.Equal(12, created.Count);
+        Assert.All(created, t => Assert.Equal("CO", t.Country));
+    }
+
     /// <summary>Sin pais, o con un pais sin fichero, el micro no arranca.</summary>
     [Theory]
     [InlineData(null)]

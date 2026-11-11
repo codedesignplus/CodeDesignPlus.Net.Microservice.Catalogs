@@ -4,6 +4,7 @@
     "100": "Unknown error.",
     "101": "The name is required.",
     "102": "The code is required.",
-    "103": "The user making the change is missing."
+    "103": "The user making the change is missing.",
+    "104": "The country is required."
   }
 }

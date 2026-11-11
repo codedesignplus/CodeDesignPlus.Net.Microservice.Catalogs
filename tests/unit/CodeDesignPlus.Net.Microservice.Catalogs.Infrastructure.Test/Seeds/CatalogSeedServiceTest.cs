@@ -12,14 +12,30 @@ namespace CodeDesignPlus.Net.Microservice.Catalogs.Infrastructure.Test.Seeds;
 /// </summary>
 public class CatalogSeedServiceTest
 {
-    /// <summary>Colombia siembra seis tipos, sin «Celular», y sin ids repetidos.</summary>
+    /// <summary>
+    /// Colombia siembra la tabla de tipos de documento de la DIAN, con su codigo (pendings/663).
+    /// </summary>
     [Fact]
-    public void Colombia_HasSixTypes_WithoutCellPhone()
+    public void LoadTypeDocuments_Colombia_HasTheDianCodes()
     {
+        // Act
         var types = CatalogSeedService.LoadTypeDocuments("co");
 
-        Assert.Equal(["CC", "CE", "NIT", "PP", "TI", "RC"], types.Select(t => t.Code));
-        Assert.Equal(types.Count, types.Select(t => t.Id).Distinct().Count());
+        // Assert
+        Assert.Equal(["11", "12", "13", "21", "22", "31", "41", "42", "47", "48", "50", "91"], types.Select(t => t.Code));
+    }
+
+    /// <summary>
+    /// El id de cada tipo es fijo y sale de su codigo DIAN, el mismo en todos los entornos y en ms-microsoftgraph.
+    /// </summary>
+    [Fact]
+    public void LoadTypeDocuments_Colombia_IdsAreFixedByDianCode()
+    {
+        // Act
+        var types = CatalogSeedService.LoadTypeDocuments("co");
+
+        // Assert
+        Assert.All(types, t => Assert.Equal(Guid.Parse($"c0d0c000-0000-0000-0000-0000000000{t.Code}"), t.Id));
     }
 
     /// <summary>Sin pais, o con un pais sin fichero, el micro no arranca.</summary>
@@ -60,7 +76,7 @@ public class CatalogSeedServiceTest
     {
         var types = CatalogSeedService.LoadTypeDocuments("co");
         var repository = new Mock<ITypeDocumentRepository>();
-        repository.Setup(x => x.ExistsCodeAsync("CC", It.IsAny<Guid>(), It.IsAny<CancellationToken>())).ReturnsAsync(true);
+        repository.Setup(x => x.ExistsCodeAsync("13", It.IsAny<Guid>(), It.IsAny<CancellationToken>())).ReturnsAsync(true);
         var created = new List<TypeDocumentAggregate>();
         repository.Setup(x => x.CreateAsync(It.IsAny<TypeDocumentAggregate>(), It.IsAny<CancellationToken>()))
             .Callback<TypeDocumentAggregate, CancellationToken>((t, _) => created.Add(t));
@@ -68,7 +84,7 @@ public class CatalogSeedServiceTest
         var service = new CatalogSeedService(repository.Object, new ConfigurationBuilder().Build(), NullLogger<CatalogSeedService>.Instance);
         await service.SeedTypeDocumentsAsync(types, CancellationToken.None);
 
-        Assert.DoesNotContain(created, t => t.Code == "CC");
+        Assert.DoesNotContain(created, t => t.Code == "13");
         Assert.Equal(types.Count - 1, created.Count);
     }
 }

@@ -20,6 +20,11 @@ namespace CodeDesignPlus.Net.Microservice.Catalogs.Infrastructure.Seeds;
 /// <para>Consecuencias: corregir un tipo que ya existe no se hace cambiando el fichero, sino desde la pantalla; un tipo
 /// sembrado que se borra vuelve en el siguiente arranque (para retirarlo se desactiva, o se quita del fichero); y un
 /// tipo que se quita del fichero no se borra de las bases donde ya estaba.</para>
+///
+/// <para><b>El codigo es el del pais</b> (pendings/663). En Colombia es el de la DIAN (13 cedula, 31 NIT...), el que
+/// pide la factura electronica para el adquiriente, y el id de cada tipo es fijo en todos los entornos
+/// (<c>c0d0c000-0000-0000-0000-0000000000NN</c>, con NN el codigo DIAN). ms-microsoftgraph resuelve el codigo que
+/// llega del registro de Entra External ID contra esta misma lista, con los mismos ids.</para>
 /// </summary>
 public class CatalogSeedService(
     ITypeDocumentRepository typeDocumentRepository,

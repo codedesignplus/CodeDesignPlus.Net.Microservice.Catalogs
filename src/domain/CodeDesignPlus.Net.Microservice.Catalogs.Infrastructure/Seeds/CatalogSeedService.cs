@@ -21,6 +21,9 @@ namespace CodeDesignPlus.Net.Microservice.Catalogs.Infrastructure.Seeds;
 /// sembrado que se borra vuelve en el siguiente arranque (para retirarlo se desactiva, o se quita del fichero); y un
 /// tipo que se quita del fichero no se borra de las bases donde ya estaba.</para>
 ///
+/// <para>La unica excepcion es la abreviatura (pendings/663): un tipo sembrado que se guardo sin ella la recibe del
+/// fichero. Es completar un campo vacio por la clave del tipo, no pisar nada: si ya tiene una, se queda la suya.</para>
+///
 /// <para><b>El codigo es el del pais</b> (pendings/663). En Colombia es el de la DIAN (13 cedula, 31 NIT...), el que
 /// pide la factura electronica para el adquiriente, y el id de cada tipo es fijo en todos los entornos
 /// (<c>c0d0c000-0000-0000-0000-0000000000NN</c>, con NN el codigo DIAN). ms-microsoftgraph resuelve el codigo que
@@ -82,13 +85,19 @@ public class CatalogSeedService(
     public async Task SeedTypeDocumentsAsync(List<TypeDocumentSeed> data, CancellationToken ct)
     {
         var inserted = 0;
+        var completed = 0;
 
         foreach (var item in data)
         {
             try
             {
                 if (await typeDocumentRepository.ExistsAsync<TypeDocumentAggregate>(item.Id, ct))
+                {
+                    if (await CompleteAbbreviationAsync(item, ct))
+                        completed++;
+
                     continue;
+                }
 
                 if (await typeDocumentRepository.ExistsCodeAsync(item.Code, item.Id, ct))
                 {
@@ -96,7 +105,7 @@ public class CatalogSeedService(
                     continue;
                 }
 
-                var aggregate = TypeDocumentAggregate.Create(item.Id, item.Name, item.Description, item.Code, item.Country!, true, SystemUserId);
+                var aggregate = TypeDocumentAggregate.Create(item.Id, item.Name, item.Description, item.Code, item.Abbreviation!, item.Country!, true, SystemUserId);
                 await typeDocumentRepository.CreateAsync(aggregate, ct);
                 inserted++;
             }
@@ -107,7 +116,29 @@ public class CatalogSeedService(
         }
 
         logger.LogInformation("Seeded {Inserted}/{Total} type documents.", inserted, data.Count);
+
+        if (completed > 0)
+            logger.LogInformation("Completed the abbreviation of {Completed} seeded type documents.", completed);
+    }
+
+    /// <summary>
+    /// Un tipo sembrado antes de que existiera la abreviatura la recibe del fichero (pendings/663). Completar solo anade
+    /// (regla 25): si ya tiene una, aunque sea otra, no se toca.
+    /// </summary>
+    private async Task<bool> CompleteAbbreviationAsync(TypeDocumentSeed item, CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(item.Abbreviation))
+            return false;
+
+        var stored = await typeDocumentRepository.FindAsync<TypeDocumentAggregate>(item.Id, ct);
+
+        if (stored is null || !stored.CompleteAbbreviation(item.Abbreviation, SystemUserId))
+            return false;
+
+        await typeDocumentRepository.UpdateAsync(stored, ct);
+
+        return true;
     }
 }
 
-public record TypeDocumentSeed(Guid Id, string Name, string? Description, string Code, string? Country = null);
+public record TypeDocumentSeed(Guid Id, string Name, string? Description, string Code, string? Abbreviation = null, string? Country = null);

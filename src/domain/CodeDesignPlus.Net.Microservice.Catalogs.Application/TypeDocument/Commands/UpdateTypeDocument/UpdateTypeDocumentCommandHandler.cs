@@ -14,7 +14,7 @@ public class UpdateTypeDocumentCommandHandler(ITypeDocumentRepository repository
 
         ApplicationGuard.IsTrue(codeInUse, Errors.TypeDocumentCodeAlreadyExists);
 
-        typeDocument.Update(request.Name, request.Description, request.Code, request.IsActive, user.IdUser);
+        typeDocument.Update(request.Name, request.Description, request.Code, request.Abbreviation, request.IsActive, user.IdUser);
 
         await repository.UpdateAsync(typeDocument, cancellationToken);
 

@@ -3,72 +3,84 @@
     "id": "c0d0c000-0000-0000-0000-000000000011",
     "name": "Registro Civil",
     "description": "Registro civil de nacimiento expedido por la Registraduría Nacional.",
-    "code": "11"
+    "code": "11",
+    "abbreviation": "RC"
   },
   {
     "id": "c0d0c000-0000-0000-0000-000000000012",
     "name": "Tarjeta de Identidad",
     "description": "Documento de identidad colombiano para menores entre 7 y 17 años.",
-    "code": "12"
+    "code": "12",
+    "abbreviation": "TI"
   },
   {
     "id": "c0d0c000-0000-0000-0000-000000000013",
     "name": "Cédula de Ciudadanía",
     "description": "Documento de identidad colombiano para mayores de 18 años.",
-    "code": "13"
+    "code": "13",
+    "abbreviation": "CC"
   },
   {
     "id": "c0d0c000-0000-0000-0000-000000000021",
     "name": "Tarjeta de Extranjería",
     "description": "Documento de identidad para extranjeros menores de edad residentes en Colombia.",
-    "code": "21"
+    "code": "21",
+    "abbreviation": "TE"
   },
   {
     "id": "c0d0c000-0000-0000-0000-000000000022",
     "name": "Cédula de Extranjería",
     "description": "Documento de identidad para extranjeros residentes en Colombia.",
-    "code": "22"
+    "code": "22",
+    "abbreviation": "CE"
   },
   {
     "id": "c0d0c000-0000-0000-0000-000000000031",
     "name": "NIT",
     "description": "Número de identificación tributaria asignado por la DIAN.",
-    "code": "31"
+    "code": "31",
+    "abbreviation": "NIT"
   },
   {
     "id": "c0d0c000-0000-0000-0000-000000000041",
     "name": "Pasaporte",
     "description": "Documento de viaje internacional.",
-    "code": "41"
+    "code": "41",
+    "abbreviation": "PP"
   },
   {
     "id": "c0d0c000-0000-0000-0000-000000000042",
     "name": "Documento de Identificación Extranjero",
     "description": "Documento de identidad expedido por otro país.",
-    "code": "42"
+    "code": "42",
+    "abbreviation": "DIE"
   },
   {
     "id": "c0d0c000-0000-0000-0000-000000000047",
     "name": "Permiso Especial de Permanencia (PEP)",
     "description": "Permiso de Migración Colombia para ciudadanos venezolanos.",
-    "code": "47"
+    "code": "47",
+    "abbreviation": "PEP"
   },
   {
     "id": "c0d0c000-0000-0000-0000-000000000048",
     "name": "Permiso por Protección Temporal (PPT)",
     "description": "Documento de Migración Colombia del Estatuto Temporal de Protección para Migrantes Venezolanos.",
-    "code": "48"
+    "code": "48",
+    "abbreviation": "PPT"
   },
   {
     "id": "c0d0c000-0000-0000-0000-000000000050",
     "name": "NIT de Otro País",
     "description": "Identificación tributaria de una persona o empresa de otro país.",
-    "code": "50"
+    "code": "50",
+    "abbreviation": "NITE"
   },
   {
     "id": "c0d0c000-0000-0000-0000-000000000091",
     "name": "NUIP",
     "description": "Número único de identificación personal.",
-    "code": "91"
+    "code": "91",
+    "abbreviation": "NUIP"
   }
 ]

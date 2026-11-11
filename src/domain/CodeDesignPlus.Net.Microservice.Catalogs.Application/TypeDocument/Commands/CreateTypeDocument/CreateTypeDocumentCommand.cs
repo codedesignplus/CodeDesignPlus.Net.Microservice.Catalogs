@@ -1,7 +1,7 @@
 namespace CodeDesignPlus.Net.Microservice.Catalogs.Application.TypeDocument.Commands.CreateTypeDocument;
 
 [DtoGenerator]
-public record CreateTypeDocumentCommand(Guid Id, string Name, string? Description, string Code, bool IsActive) : IRequest;
+public record CreateTypeDocumentCommand(Guid Id, string Name, string? Description, string Code, string Abbreviation, bool IsActive) : IRequest;
 
 /// <summary>
 /// Solo validadores corrientes y sin texto propio: el SDK los traduce a los cuatro idiomas con el nombre de la
@@ -15,5 +15,6 @@ public class Validator : AbstractValidator<CreateTypeDocumentCommand>
         RuleFor(x => x.Name).NotEmpty().MaximumLength(FieldLength.Name);
         RuleFor(x => x.Description).MaximumLength(FieldLength.Description);
         RuleFor(x => x.Code).NotEmpty().MaximumLength(4);
+        RuleFor(x => x.Abbreviation).NotEmpty().MaximumLength(TypeDocumentAggregate.AbbreviationMaxLength);
     }
 }

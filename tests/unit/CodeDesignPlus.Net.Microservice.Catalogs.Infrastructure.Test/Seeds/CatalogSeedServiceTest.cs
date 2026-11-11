@@ -3,6 +3,9 @@ using System.Threading.Tasks;
 using CodeDesignPlus.Net.Microservice.Catalogs.Domain.Repositories;
 using CodeDesignPlus.Net.Microservice.Catalogs.Infrastructure.Seeds;
 using Microsoft.Extensions.Logging.Abstractions;
+using CodeDesignPlus.Net.Mongo.Extensions;
+using MongoDB.Bson;
+using MongoDB.Bson.Serialization;
 using Xunit;
 
 namespace CodeDesignPlus.Net.Microservice.Catalogs.Infrastructure.Test.Seeds;
@@ -108,5 +111,109 @@ public class CatalogSeedServiceTest
 
         Assert.DoesNotContain(created, t => t.Code == "13");
         Assert.Equal(types.Count - 1, created.Count);
+    }
+
+    /// <summary>
+    /// Cada tipo de Colombia trae la abreviatura con la que lo muestran las pantallas (pendings/663).
+    /// </summary>
+    [Fact]
+    public void LoadTypeDocuments_Colombia_HasTheAbbreviations()
+    {
+        // Act
+        var types = CatalogSeedService.LoadTypeDocuments("co");
+
+        // Assert
+        Assert.Equal(
+            ["RC", "TI", "CC", "TE", "CE", "NIT", "PP", "DIE", "PEP", "PPT", "NITE", "NUIP"],
+            types.Select(t => t.Abbreviation));
+    }
+
+    /// <summary>
+    /// Un tipo nuevo se siembra con su abreviatura (pendings/663).
+    /// </summary>
+    [Fact]
+    public async Task SeedTypeDocumentsAsync_Colombia_StoresTheAbbreviation()
+    {
+        // Arrange
+        var types = CatalogSeedService.LoadTypeDocuments("co");
+        var repository = new Mock<ITypeDocumentRepository>();
+        var created = new List<TypeDocumentAggregate>();
+        repository.Setup(x => x.CreateAsync(It.IsAny<TypeDocumentAggregate>(), It.IsAny<CancellationToken>()))
+            .Callback<TypeDocumentAggregate, CancellationToken>((t, _) => created.Add(t));
+        var service = new CatalogSeedService(repository.Object, new ConfigurationBuilder().Build(), NullLogger<CatalogSeedService>.Instance);
+
+        // Act
+        await service.SeedTypeDocumentsAsync(types, CancellationToken.None);
+
+        // Assert
+        Assert.Equal(types.Select(t => t.Abbreviation), created.Select(t => t.Abbreviation));
+    }
+
+    /// <summary>
+    /// Un tipo sembrado antes de que existiera la abreviatura la recibe del fichero, sin crear otro (regla 25,
+    /// pendings/663).
+    /// </summary>
+    [Fact]
+    public async Task SeedTypeDocumentsAsync_SeededTypeWithoutAbbreviation_GetsItFromTheFile()
+    {
+        // Arrange
+        var types = CatalogSeedService.LoadTypeDocuments("co");
+        var nit = types.Single(t => t.Code == "31");
+        var stored = StoredWithoutAbbreviation(nit);
+        var repository = RepositoryWith(stored);
+        var service = new CatalogSeedService(repository.Object, new ConfigurationBuilder().Build(), NullLogger<CatalogSeedService>.Instance);
+
+        // Act
+        await service.SeedTypeDocumentsAsync(types, CancellationToken.None);
+
+        // Assert
+        Assert.Equal("NIT", stored.Abbreviation);
+        Assert.Equal(CatalogSeedService.SystemUserId, stored.UpdatedBy);
+        repository.Verify(x => x.UpdateAsync(stored, It.IsAny<CancellationToken>()), Times.Once);
+        repository.Verify(x => x.CreateAsync(It.Is<TypeDocumentAggregate>(t => t.Id == nit.Id), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    /// <summary>
+    /// Completar solo anade: la abreviatura que el usuario puso a un tipo sembrado se queda (regla 25, pendings/663).
+    /// </summary>
+    [Fact]
+    public async Task SeedTypeDocumentsAsync_SeededTypeWithItsOwnAbbreviation_IsNotTouched()
+    {
+        // Arrange
+        var types = CatalogSeedService.LoadTypeDocuments("co");
+        var nit = types.Single(t => t.Code == "31");
+        var stored = TypeDocumentAggregate.Create(nit.Id, nit.Name, nit.Description, nit.Code, "N.I.T.", "CO", true, Guid.NewGuid());
+        var repository = RepositoryWith(stored);
+        var service = new CatalogSeedService(repository.Object, new ConfigurationBuilder().Build(), NullLogger<CatalogSeedService>.Instance);
+
+        // Act
+        await service.SeedTypeDocumentsAsync(types, CancellationToken.None);
+
+        // Assert
+        Assert.Equal("N.I.T.", stored.Abbreviation);
+        repository.Verify(x => x.UpdateAsync(It.IsAny<TypeDocumentAggregate>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    /// <summary>
+    /// Un tipo guardado sin abreviatura: se serializa uno de verdad y se le quita el campo, como lo deja Mongo (regla 31).
+    /// </summary>
+    private static TypeDocumentAggregate StoredWithoutAbbreviation(TypeDocumentSeed seed)
+    {
+        MongoSerializerRegistration.RegisterSerializers();
+
+        var document = TypeDocumentAggregate.Create(seed.Id, seed.Name, seed.Description, seed.Code, "X", "CO", true, Guid.NewGuid()).ToBsonDocument();
+        document.Remove("Abbreviation");
+
+        return BsonSerializer.Deserialize<TypeDocumentAggregate>(document);
+    }
+
+    private static Mock<ITypeDocumentRepository> RepositoryWith(TypeDocumentAggregate stored)
+    {
+        var repository = new Mock<ITypeDocumentRepository>();
+        repository.Setup(x => x.ExistsAsync<TypeDocumentAggregate>(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((Guid id, CancellationToken _) => id == stored.Id);
+        repository.Setup(x => x.FindAsync<TypeDocumentAggregate>(stored.Id, It.IsAny<CancellationToken>())).ReturnsAsync(stored);
+
+        return repository;
     }
 }

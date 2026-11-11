@@ -18,7 +18,7 @@ public class CreateTypeDocumentCommandHandler(ITypeDocumentRepository repository
 
         ApplicationGuard.IsTrue(codeInUse, Errors.TypeDocumentCodeAlreadyExists);
 
-        var typeDocument = TypeDocumentAggregate.Create(request.Id, request.Name, request.Description, request.Code, seed.Value.Country, request.IsActive, user.IdUser);
+        var typeDocument = TypeDocumentAggregate.Create(request.Id, request.Name, request.Description, request.Code, request.Abbreviation, seed.Value.Country, request.IsActive, user.IdUser);
 
         // Dos envíos que llegan a la vez pasan los dos la comprobación de arriba; el segundo choca contra el id y no publica.
         if (!await repository.CreateIfAbsentAsync(typeDocument, cancellationToken))

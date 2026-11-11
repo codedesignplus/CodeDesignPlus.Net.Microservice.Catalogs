@@ -11,6 +11,7 @@ using CodeDesignPlus.Net.Microservice.Catalogs.Application.Options;
 using Microsoft.Extensions.Options;
 using AppErrors = CodeDesignPlus.Net.Microservice.Catalogs.Application.Errors;
 using CreateValidator = CodeDesignPlus.Net.Microservice.Catalogs.Application.TypeDocument.Commands.CreateTypeDocument.Validator;
+using UpdateValidator = CodeDesignPlus.Net.Microservice.Catalogs.Application.TypeDocument.Commands.UpdateTypeDocument.Validator;
 
 namespace CodeDesignPlus.Net.Microservice.Catalogs.Application.Test.TypeDocument;
 
@@ -32,7 +33,7 @@ public class TypeDocumentHandlersTest
     }
 
     private static TypeDocumentAggregate NewTypeDocument(Guid id) =>
-        TypeDocumentAggregate.Create(id, "Pasaporte", "Documento de viaje", "PP", "CO", true, Guid.NewGuid());
+        TypeDocumentAggregate.Create(id, "Pasaporte", "Documento de viaje", "PP", "PP", "CO", true, Guid.NewGuid());
 
     private static TypeDocumentDto NewDto(Guid id) =>
         new() { Id = id, Name = "Pasaporte", Description = null, Code = "PP", IsActive = true };
@@ -79,7 +80,7 @@ public class TypeDocumentHandlersTest
         repository.Setup(x => x.FindAsync<TypeDocumentAggregate>(id, It.IsAny<CancellationToken>())).ReturnsAsync(typeDocument);
 
         var handler = new UpdateTypeDocumentCommandHandler(repository.Object, pubsub.Object, cache.Object, user.Object);
-        await handler.Handle(new UpdateTypeDocumentCommand(id, "Pasaporte", null, "PP", false), CancellationToken.None);
+        await handler.Handle(new UpdateTypeDocumentCommand(id, "Pasaporte", null, "PP", "PP", false), CancellationToken.None);
 
         cache.Verify(x => x.RemoveAsync(id.ToString()), Times.Once);
         Assert.Equal(userId, typeDocument.UpdatedBy);
@@ -109,7 +110,7 @@ public class TypeDocumentHandlersTest
 
         var handler = new CreateTypeDocumentCommandHandler(repository.Object, pubsub.Object, user.Object, seed);
         var error = await Assert.ThrowsAsync<CodeDesignPlusException>(() =>
-            handler.Handle(new CreateTypeDocumentCommand(id, "Otra cédula", null, "CC", true), CancellationToken.None));
+            handler.Handle(new CreateTypeDocumentCommand(id, "Otra cédula", null, "CC", "CC", true), CancellationToken.None));
 
         Assert.Equal(AppErrors.TypeDocumentCodeAlreadyExists.GetCode(), error.Code);
         repository.Verify(x => x.CreateIfAbsentAsync(It.IsAny<TypeDocumentAggregate>(), It.IsAny<CancellationToken>()), Times.Never);
@@ -125,7 +126,7 @@ public class TypeDocumentHandlersTest
 
         var handler = new UpdateTypeDocumentCommandHandler(repository.Object, pubsub.Object, cache.Object, user.Object);
         var error = await Assert.ThrowsAsync<CodeDesignPlusException>(() =>
-            handler.Handle(new UpdateTypeDocumentCommand(id, "Pasaporte", null, "CC", true), CancellationToken.None));
+            handler.Handle(new UpdateTypeDocumentCommand(id, "Pasaporte", null, "CC", "CC", true), CancellationToken.None));
 
         Assert.Equal(AppErrors.TypeDocumentCodeAlreadyExists.GetCode(), error.Code);
     }
@@ -141,7 +142,7 @@ public class TypeDocumentHandlersTest
             .ReturnsAsync(true);
 
         var handler = new CreateTypeDocumentCommandHandler(repository.Object, pubsub.Object, user.Object, seed);
-        await handler.Handle(new CreateTypeDocumentCommand(id, "Pasaporte", null, " pp ", true), CancellationToken.None);
+        await handler.Handle(new CreateTypeDocumentCommand(id, "Pasaporte", null, " pp ", "PP", true), CancellationToken.None);
 
         Assert.NotNull(created);
         Assert.Equal(userId, created!.CreatedBy);
@@ -162,7 +163,7 @@ public class TypeDocumentHandlersTest
         var handler = new CreateTypeDocumentCommandHandler(repository.Object, pubsub.Object, user.Object, seed);
 
         // Act
-        await handler.Handle(new CreateTypeDocumentCommand(Guid.NewGuid(), "Carné diplomático", null, "CD", true), CancellationToken.None);
+        await handler.Handle(new CreateTypeDocumentCommand(Guid.NewGuid(), "Carné diplomático", null, "CD", "CD", true), CancellationToken.None);
 
         // Assert
         Assert.Equal("CO", created!.Country);
@@ -177,7 +178,7 @@ public class TypeDocumentHandlersTest
     public void Aggregate_WithoutCountry_IsRejected(string country)
     {
         // Act
-        var error = Assert.Throws<CodeDesignPlusException>(() => TypeDocumentAggregate.Create(Guid.NewGuid(), "Pasaporte", null, "41", country, true, Guid.NewGuid()));
+        var error = Assert.Throws<CodeDesignPlusException>(() => TypeDocumentAggregate.Create(Guid.NewGuid(), "Pasaporte", null, "41", "PP", country, true, Guid.NewGuid()));
 
         // Assert
         Assert.Equal(Domain.Errors.CountryRequired.GetCode(), error.Code);
@@ -188,7 +189,7 @@ public class TypeDocumentHandlersTest
     public void Aggregate_WithoutUser_IsRejected()
     {
         var error = Assert.Throws<CodeDesignPlusException>(() =>
-            TypeDocumentAggregate.Create(Guid.NewGuid(), "Pasaporte", null, "PP", "CO", true, Guid.Empty));
+            TypeDocumentAggregate.Create(Guid.NewGuid(), "Pasaporte", null, "PP", "PP", "CO", true, Guid.Empty));
 
         Assert.Equal(Domain.Errors.UserRequired.GetCode(), error.Code);
     }
@@ -201,10 +202,130 @@ public class TypeDocumentHandlersTest
     public void Validator_UsesTheStandardCodes_ThatTheSdkTranslates()
     {
         var result = new CreateValidator()
-            .Validate(new CreateTypeDocumentCommand(Guid.NewGuid(), "", new string('d', 600), "ABCDEFG", true));
+            .Validate(new CreateTypeDocumentCommand(Guid.NewGuid(), "", new string('d', 600), "ABCDEFG", "CC", true));
 
         Assert.Equal(
             ["NotEmptyValidator", "MaximumLengthValidator", "MaximumLengthValidator"],
             result.Errors.Select(e => e.ErrorCode));
+    }
+
+    /// <summary>
+    /// Crear guarda la abreviatura con la que las pantallas muestran el tipo, sin espacios alrededor (pendings/663).
+    /// </summary>
+    [Fact]
+    public async Task Create_StoresTheAbbreviation()
+    {
+        // Arrange
+        TypeDocumentAggregate? created = null;
+        repository.Setup(x => x.CreateIfAbsentAsync(It.IsAny<TypeDocumentAggregate>(), It.IsAny<CancellationToken>()))
+            .Callback<TypeDocumentAggregate, CancellationToken>((t, _) => created = t)
+            .ReturnsAsync(true);
+        var handler = new CreateTypeDocumentCommandHandler(repository.Object, pubsub.Object, user.Object, seed);
+
+        // Act
+        await handler.Handle(new CreateTypeDocumentCommand(Guid.NewGuid(), "Carné diplomático", null, "CD", " CDI ", true), CancellationToken.None);
+
+        // Assert
+        Assert.Equal("CDI", created!.Abbreviation);
+    }
+
+    /// <summary>
+    /// Editar cambia la abreviatura (pendings/663).
+    /// </summary>
+    [Fact]
+    public async Task Update_ChangesTheAbbreviation()
+    {
+        // Arrange
+        var id = Guid.NewGuid();
+        var typeDocument = NewTypeDocument(id);
+        repository.Setup(x => x.FindAsync<TypeDocumentAggregate>(id, It.IsAny<CancellationToken>())).ReturnsAsync(typeDocument);
+        var handler = new UpdateTypeDocumentCommandHandler(repository.Object, pubsub.Object, cache.Object, user.Object);
+
+        // Act
+        await handler.Handle(new UpdateTypeDocumentCommand(id, "Pasaporte", null, "PP", "PAS", true), CancellationToken.None);
+
+        // Assert
+        Assert.Equal("PAS", typeDocument.Abbreviation);
+    }
+
+    /// <summary>
+    /// El agregado no se crea ni se edita sin abreviatura: sin ella la pantalla no tiene con que mostrar el tipo
+    /// (pendings/663).
+    /// </summary>
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("  ")]
+    public void Aggregate_WithoutAbbreviation_IsRejected(string? abbreviation)
+    {
+        // Act
+        var onCreate = Assert.Throws<CodeDesignPlusException>(() =>
+            TypeDocumentAggregate.Create(Guid.NewGuid(), "Pasaporte", null, "41", abbreviation!, "CO", true, Guid.NewGuid()));
+        var onUpdate = Assert.Throws<CodeDesignPlusException>(() =>
+            NewTypeDocument(Guid.NewGuid()).Update("Pasaporte", null, "41", abbreviation!, true, Guid.NewGuid()));
+
+        // Assert
+        Assert.Equal(Domain.Errors.AbbreviationRequired.GetCode(), onCreate.Code);
+        Assert.Equal(Domain.Errors.AbbreviationRequired.GetCode(), onUpdate.Code);
+    }
+
+    /// <summary>
+    /// Completar la abreviatura solo la pone si falta: la que ya tiene el tipo se queda (regla 25, pendings/663).
+    /// </summary>
+    [Fact]
+    public void CompleteAbbreviation_KeepsTheOneTheTypeAlreadyHas()
+    {
+        // Arrange
+        var typeDocument = NewTypeDocument(Guid.NewGuid());
+
+        // Act
+        var completed = typeDocument.CompleteAbbreviation("XX", Guid.NewGuid());
+
+        // Assert
+        Assert.Equal((false, "PP"), (completed, typeDocument.Abbreviation));
+    }
+
+    /// <summary>
+    /// La abreviatura se pide al crear y al editar, con su longitud maxima, y con los codigos estandar que el SDK traduce
+    /// (reglas 35 y 48, pendings/663).
+    /// </summary>
+    [Theory]
+    [InlineData("", "NotEmptyValidator")]
+    [InlineData("ABCDEFGHIJK", "MaximumLengthValidator")]
+    public void Validators_RejectAMissingOrTooLongAbbreviation(string abbreviation, string expected)
+    {
+        // Act
+        var onCreate = new CreateValidator().Validate(new CreateTypeDocumentCommand(Guid.NewGuid(), "Pasaporte", null, "41", abbreviation, true));
+        var onUpdate = new UpdateValidator().Validate(new UpdateTypeDocumentCommand(Guid.NewGuid(), "Pasaporte", null, "41", abbreviation, true));
+
+        // Assert
+        Assert.Equal([(nameof(CreateTypeDocumentCommand.Abbreviation), expected)], onCreate.Errors.Select(e => (e.PropertyName, e.ErrorCode)));
+        Assert.Equal([(nameof(UpdateTypeDocumentCommand.Abbreviation), expected)], onUpdate.Errors.Select(e => (e.PropertyName, e.ErrorCode)));
+    }
+
+    /// <summary>
+    /// Una abreviatura del largo maximo pasa (pendings/663).
+    /// </summary>
+    [Fact]
+    public void Validator_AcceptsAnAbbreviationOfTheMaximumLength()
+    {
+        // Act
+        var result = new CreateValidator().Validate(new CreateTypeDocumentCommand(Guid.NewGuid(), "Pasaporte", null, "41", "ABCDEFGHIJ", true));
+
+        // Assert
+        Assert.True(result.IsValid);
+    }
+
+    /// <summary>
+    /// El DTO lleva la abreviatura del agregado (pendings/663).
+    /// </summary>
+    [Fact]
+    public void Dto_CarriesTheAbbreviation()
+    {
+        // Act
+        var dto = NewTypeDocument(Guid.NewGuid()).Adapt<TypeDocumentDto>();
+
+        // Assert
+        Assert.Equal("PP", dto.Abbreviation);
     }
 }

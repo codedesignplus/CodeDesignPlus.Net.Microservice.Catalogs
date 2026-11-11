@@ -5,6 +5,7 @@
     "101": "O nome é obrigatório.",
     "102": "O código é obrigatório.",
     "103": "Falta o usuário que faz a alteração.",
-    "104": "O país é obrigatório."
+    "104": "O país é obrigatório.",
+    "105": "A abreviatura é obrigatória."
   }
 }

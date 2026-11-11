@@ -1,10 +1,7 @@
 using System.Threading;
 using System.Threading.Tasks;
 using CodeDesignPlus.Net.Microservice.Catalogs.Domain.Repositories;
-using CodeDesignPlus.Net.Microservice.Catalogs.Domain.DomainEvents;
 using CodeDesignPlus.Net.Microservice.Catalogs.Infrastructure.Seeds;
-using CodeDesignPlus.Net.Core.Abstractions;
-using CodeDesignPlus.Net.PubSub.Abstractions;
 using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
 
@@ -48,7 +45,7 @@ public class CatalogSeedServiceTest
         repository.Setup(x => x.CreateAsync(It.IsAny<TypeDocumentAggregate>(), It.IsAny<CancellationToken>()))
             .Callback<TypeDocumentAggregate, CancellationToken>((t, _) => created.Add(t));
 
-        var service = new CatalogSeedService(repository.Object, Mock.Of<IPubSub>(), new ConfigurationBuilder().Build(), NullLogger<CatalogSeedService>.Instance);
+        var service = new CatalogSeedService(repository.Object, new ConfigurationBuilder().Build(), NullLogger<CatalogSeedService>.Instance);
         await service.SeedTypeDocumentsAsync(types, CancellationToken.None);
 
         Assert.Equal(types.Count - 1, created.Count);
@@ -68,37 +65,10 @@ public class CatalogSeedServiceTest
         repository.Setup(x => x.CreateAsync(It.IsAny<TypeDocumentAggregate>(), It.IsAny<CancellationToken>()))
             .Callback<TypeDocumentAggregate, CancellationToken>((t, _) => created.Add(t));
 
-        var service = new CatalogSeedService(repository.Object, Mock.Of<IPubSub>(), new ConfigurationBuilder().Build(), NullLogger<CatalogSeedService>.Instance);
+        var service = new CatalogSeedService(repository.Object, new ConfigurationBuilder().Build(), NullLogger<CatalogSeedService>.Instance);
         await service.SeedTypeDocumentsAsync(types, CancellationToken.None);
 
         Assert.DoesNotContain(created, t => t.Code == "CC");
         Assert.Equal(types.Count - 1, created.Count);
-    }
-
-    /// <summary>
-    /// Cada tipo insertado se anuncia, para que las copias del catalogo (ms-microsoftgraph) lo reciban (pendings/663).
-    /// </summary>
-    [Fact]
-    public async Task SeedTypeDocumentsAsync_InsertedTypes_PublishesTheirCreatedEvents()
-    {
-        // Arrange
-        var types = CatalogSeedService.LoadTypeDocuments("co");
-        var existingId = types[0].Id;
-        var repository = new Mock<ITypeDocumentRepository>();
-        repository.Setup(x => x.ExistsAsync<TypeDocumentAggregate>(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync((Guid id, CancellationToken _) => id == existingId);
-        var pubSub = new Mock<IPubSub>();
-        var published = new List<TypeDocumentCreatedDomainEvent>();
-        pubSub.Setup(x => x.PublishAsync(It.IsAny<IReadOnlyList<IDomainEvent>>(), It.IsAny<CancellationToken>()))
-            .Callback<IReadOnlyList<IDomainEvent>, CancellationToken>((events, _) => published.AddRange(events.OfType<TypeDocumentCreatedDomainEvent>()))
-            .Returns(Task.CompletedTask);
-
-        var service = new CatalogSeedService(repository.Object, pubSub.Object, new ConfigurationBuilder().Build(), NullLogger<CatalogSeedService>.Instance);
-
-        // Act
-        await service.SeedTypeDocumentsAsync(types, CancellationToken.None);
-
-        // Assert
-        Assert.Equal(types.Skip(1).Select(t => (t.Id, t.Code)), published.Select(e => (e.AggregateId, e.Code)));
     }
 }

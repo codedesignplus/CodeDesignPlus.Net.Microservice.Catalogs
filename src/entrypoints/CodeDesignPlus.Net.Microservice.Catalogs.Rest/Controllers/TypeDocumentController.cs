@@ -1,4 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
+using CodeDesignPlus.Net.Core.Abstractions.Models.Pager;
+using CodeDesignPlus.Net.Microservice.Catalogs.Application.TypeDocument.DataTransferObjects;
 
 namespace CodeDesignPlus.Net.Microservice.Catalogs.Rest.Controllers;
 
@@ -19,6 +21,7 @@ public class TypeDocumentController(IMediator mediator, IMapper mapper) : Contro
     /// <returns>A page of TypeDocuments.</returns>
     [HttpGet]
     [AllowAnonymous]
+    [ProducesResponseType<Pagination<TypeDocumentDto>>(StatusCodes.Status200OK)]
     public async Task<IActionResult> GetTypeDocuments([FromQuery] C.Criteria criteria, CancellationToken cancellationToken)
     {
         var result = await mediator.Send(new GetAllTypeDocumentQuery(criteria), cancellationToken);
@@ -34,6 +37,7 @@ public class TypeDocumentController(IMediator mediator, IMapper mapper) : Contro
     /// <returns>The TypeDocument.</returns>
     [HttpGet("{id}")]
     [AllowAnonymous]
+    [ProducesResponseType<TypeDocumentDto>(StatusCodes.Status200OK)]
     public async Task<IActionResult> GetTypeDocumentById(Guid id, CancellationToken cancellationToken)
     {
         var result = await mediator.Send(new GetTypeDocumentByIdQuery(id), cancellationToken);
